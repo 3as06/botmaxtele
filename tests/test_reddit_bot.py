@@ -3,16 +3,31 @@ import os
 import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from reddit_to_telegram import fetch_top_posts, format_post
 
-SAMPLE_JSON = {
-    "data": {
-        "children": [
-            {"data": {"title": "Hello World", "permalink": "/r/test/comments/1"}},
-            {"data": {"title": "Second Post", "permalink": "/r/test/comments/2"}},
-        ]
+from reddit_to_telegram import fetch_post_info, translate_text
+
+
+POST_JSON = [
+    {
+        "data": {
+            "children": [
+                {
+                    "data": {
+                        "title": "Cute cat",
+                        "selftext": "",
+                        "url_overridden_by_dest": "https://i.redd.it/cat.jpg",
+                        "is_video": False,
+                        "preview": {
+                            "images": [
+                                {"source": {"url": "https://i.redd.it/cat.jpg"}}
+                            ]
+                        },
+                    }
+                }
+            ]
+        }
     }
-}
+]
 
 
 class DummyResponse:
@@ -33,19 +48,17 @@ class DummyResponse:
         return iter([])
 
 
-def test_fetch_top_posts(monkeypatch):
+def test_fetch_post_info(monkeypatch):
     def fake_urlopen(req):
-        return DummyResponse(SAMPLE_JSON)
+        return DummyResponse(POST_JSON)
 
     monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
-    posts = fetch_top_posts("test", limit=2)
-    assert len(posts) == 2
-    assert posts[0]["title"] == "Hello World"
-    assert posts[0]["url"].endswith("/r/test/comments/1")
+    post = fetch_post_info("https://reddit.com/r/test/comments/1")
+    assert post["title"] == "Cute cat"
+    assert post["media_url"].endswith("cat.jpg")
+    assert post["media_type"] == "photo"
 
 
-def test_format_post():
-    post = {"title": "Hello", "url": "https://example.com"}
-    text = format_post(post)
-    assert "Вот что пишут" in text
-    assert "https://example.com" in text
+def test_translate_text():
+    result = translate_text("Hello")
+    assert "Перевод" in result
